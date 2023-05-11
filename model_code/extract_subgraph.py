@@ -140,7 +140,6 @@ def country_to_continent(country_name):
 
 # 从l2数据聚合
 
-
 def extract_subgraph_l1():
     # 边：包括起始位置、海缆名字、带宽
     df_edge = pd.read_csv(config.l2_edge_data_path)
@@ -168,6 +167,6 @@ def extract_subgraph_l1():
 
 
 if __name__ == '__main__':
-    # extract_subgraph_l3()
-    # extract_subgraph_l2()
+    extract_subgraph_l3()
+    extract_subgraph_l2()
     extract_subgraph_l1()

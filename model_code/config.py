@@ -24,3 +24,8 @@ class DefaultConfig(object):
     l1_node_data_path = os.path.join(current_path, 'data/near_merge_data/l1_node.csv')
     l1_edge_data_path = os.path.join(current_path, 'data/near_merge_data/l1_edge.csv')
     l1_result_path = os.path.join(current_path, 'result/')
+
+    # 原始数据
+    cable_geo_data_path = os.path.join(current_path, 'data/raw_data/cable-geo.json')
+    landing_point_data_path=os.path.join(current_path, 'data/raw_data/landing-point-geo.json')
+    cable_file_path = os.path.join(current_path, 'data/raw_data/cable/')
