@@ -99,15 +99,44 @@ def plot_graph_l2(G):
     # plt.show()
     plt.savefig('./result/L2_one_graph.jpg')
 
+class L2Indicator:
+    @staticmethod
+    def l2_pagerank(G):
+        #计算节点重要度  自动转化为双向图
+        pagerank = nx.pagerank(G,alpha=0.8)
+        # 获取排名前五的节点
+        top_nodes = sorted(pagerank, key=pagerank.get, reverse=True)[:5]
+        # 打印排名前五的节点
+        print("Top 5 nodes:")
+        for node in top_nodes:
+            print("Node:", node, "PageRank Score:", pagerank[node])
+
+    @staticmethod
+    #计算连通性(可达国家数) 连通率（占总的）
+    def l2_connectivity(G,country_name):
+        num_nodes = G.number_of_nodes()
+        print("所有国家数量：", num_nodes)
+        # 计算可达国家数
+        reachable_nodes = nx.descendants(G, country_name)
+        print("可达国家数量：", len(reachable_nodes))
+        print("可达国家：", reachable_nodes)
+        # 计算连通率
+        connectivity = len(reachable_nodes) / num_nodes
+        print("连通率：", connectivity)
+
+
+def calculate_l2_indicator(G):
+    # L2Indicator.l2_pagerank(G)
+    L2Indicator.l2_connectivity(G,' China')
 
 def main_l2():
     G = gen_graph()
-    plot_graph_l2(G)
+    # plot_graph_l2(G)
+    calculate_l2_indicator(G)
 
 
 if __name__ == '__main__':
-    G = gen_graph()
-    plot_graph_l2(G)
+    main_l2()
 
     # extract_subgraph_l3()
     # extract_subgraph_l2()
