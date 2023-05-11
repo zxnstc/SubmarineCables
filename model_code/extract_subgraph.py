@@ -7,7 +7,6 @@ import pycountry_convert as pc
 
 config = DefaultConfig()
 
-
 def extract_subgraph_l3():
     df_node = pd.read_csv(config.l4_node_data_path)
     df_node.drop_duplicates(subset=df_node.columns, keep='last', inplace=True)

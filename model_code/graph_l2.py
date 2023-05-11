@@ -121,7 +121,7 @@ class L2Indicator:
         print("可达国家数量：", len(reachable_nodes))
         print("可达国家：", reachable_nodes)
         # 计算连通率
-        connectivity = len(reachable_nodes) / num_nodes
+        connectivity = (len(reachable_nodes)+1) / num_nodes
         print("连通率：", connectivity)
 
 
