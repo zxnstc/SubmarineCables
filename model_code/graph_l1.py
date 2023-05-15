@@ -1,7 +1,7 @@
 # 图数据挖掘
 from config import DefaultConfig
 import networkx as nx
-
+from networkx.algorithms import approximation as approx
 import numpy as np
 import pandas as pd
 
@@ -124,6 +124,25 @@ class L1Indicator:
         connectivity = len(reachable_nodes) / num_nodes
         print("连通率：", connectivity)
 
+    @staticmethod
+    #计算区域间连通性
+    def l1_connect_uv(G,source,target):
+        paths=nx.all_simple_paths(G, source=source, target=target,cutoff=5)
+        sum=0
+        for i in paths:
+            sum+=1
+        print(source,"到",target,"的路径数：",sum)
+        return sum
+
+    @staticmethod
+    #计算路径可靠性
+    def l1_independent_path(G,source,target):
+        independent_paths=approx.local_node_connectivity(G,source,target)
+        total_independent_paths=0
+        for path in independent_paths:
+            total_independent_paths+=path
+        print(source,"到",target,"的独立路径数：",total_independent_paths)
+        return total_independent_paths
 
 def cal_l1_indicator():
     G = gen_graph()

@@ -106,6 +106,14 @@ def plot_graph_l4(G):
     plt.savefig('./result/L4_one_graph.jpg')
 
 
+def l2_connect_uv(G,source,target):
+    paths=nx.all_simple_paths(G, source=source, target=target,cutoff=10)
+    sum=0
+    for i in paths:
+        sum+=1
+    print(source,"到",target,"的路径数：",sum)
+    return sum
+
 def main_l4():
     G = gen_graph()
     plot_graph_l4(G)

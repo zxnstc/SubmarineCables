@@ -1,7 +1,7 @@
 # 图数据挖掘
 from config import DefaultConfig
 import networkx as nx
-
+from networkx.algorithms import approximation as approx
 import numpy as np
 import pandas as pd
 import pycountry_convert as pc
@@ -118,6 +118,53 @@ class L3Indicator:
         print("Top 5 nodes:")
         for node in top_nodes:
             print("Node:", node, "PageRank Score:", pagerank[node])
+
+    @staticmethod
+    #连接总带宽
+    def l3_bandwidth_sum(landing_point):
+        df_edge = pd.read_csv(config.l3_edge_data_path)
+        df_edge.drop_duplicates(subset=df_edge.columns, keep='last', inplace=True)
+        df_edge = df_edge.loc[~(df_edge['start_land_name'] == df_edge['end_land_name'])]
+        df_edge = df_edge.loc[(df_edge['start_land_name'] == landing_point) | (df_edge['end_land_name'] == landing_point)]
+        df_edge=df_edge.groupby(['cable_id'])[["band_width"]].mean()
+        bandwidth_sum = df_edge['band_width'].sum()
+        print(df_edge)
+        # print("df_edge land point: ", df_edge.shape[0])
+        print(bandwidth_sum)
+        return bandwidth_sum
+
+    @staticmethod
+    #可达登陆点个数
+    def l3_reachable_landing_point_sum(G,landing_point):
+        num_nodes = G.number_of_nodes()
+        print("所有登陆点数量：", num_nodes)
+        # 计算可达国家数
+        reachable_nodes = nx.descendants(G, landing_point)
+        print("可达登陆点数量：", len(reachable_nodes))
+        print("可达登陆点：", reachable_nodes)
+        # 计算连通率
+        connectivity = (len(reachable_nodes)+1) / num_nodes
+        print("连通率：", connectivity)
+
+    @staticmethod
+    #计算区域间连通性
+    def l2_connect_uv(G,source,target):
+        paths=nx.all_simple_paths(G, source=source, target=target,cutoff=10)
+        sum=0
+        for i in paths:
+            sum+=1
+        print(source,"到",target,"的路径数：",sum)
+        return sum
+
+    @staticmethod
+    #计算路径可靠性
+    def l2_independent_path(G,source,target):
+        independent_paths=approx.local_node_connectivity(G,source,target)
+        total_independent_paths=0
+        for path in independent_paths:
+            total_independent_paths+=path
+        print(source,"到",target,"的独立路径数：",total_independent_paths)
+        return total_independent_paths
 
 
 class L2Indicator:
@@ -347,7 +394,9 @@ def calculate_l2_indicator(G):
     L2Indicator.inside_out(' China')
     
 def calculate_l3_indicator(G):
-    L3Indicator.l3_pagerank(G)
+    # L3Indicator.l3_pagerank(G)
+    L3Indicator.l3_bandwidth_sum('Blackwaterfoot, United Kingdom')
+    L3Indicator.l3_reachable_landing_point_sum(G,'Blackwaterfoot, United Kingdom')
 
 def calculate_l1_indicator(G):
     L1Indicator.landing_point_sum('Asia')
@@ -359,8 +408,8 @@ def calculate_l1_indicator(G):
 def main_l3():
     G = gen_graph()
     # calculate_l2_indicator(G)
-    calculate_l1_indicator(G)
-    # calculate_l3_indicator(G)
+    # calculate_l1_indicator(G)
+    calculate_l3_indicator(G)
     # plot_graph_l3(G)
 
 
