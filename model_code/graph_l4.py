@@ -102,8 +102,8 @@ def plot_graph_l4(G):
         alpha=alpha,
         with_labels=False,
     )
-    # plt.show()
-    plt.savefig('./result/L4_one_graph.jpg')
+    plt.show()
+    plt.savefig('model_code/result/L4_one_graph.jpg')
 
 
 def l2_connect_uv(G,source,target):
