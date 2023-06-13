@@ -3,60 +3,13 @@ import os
 import csv
 import operator
 import random
-import pycountry_convert as pc
-from config import DefaultConfig
+import copy
 import pandas as pd
 
+import pycountry_convert as pc
+from config import DefaultConfig
+sum=0
 config = DefaultConfig()
-
-with open(config.cable_geo_data_path, "r", encoding="utf-8") as f1:
-    line_dict=json.load(f1)
-
-class RawDataProcess:
-    @staticmethod
-    def one_decimal_cable():
-        with open(config.cable_geo_data_path, "r", encoding="utf-8") as f1:
-            line_dict=json.load(f1)
-
-        for index1,value1 in enumerate(line_dict["features"]):
-            # list_cable为一个种类的海缆
-            list_line=line_dict["features"][index1]["geometry"]["coordinates"]
-            for singleline in list_line:
-                for point in singleline:
-                    point[0]=round(point[0],1)
-                    point[1]=round(point[1],1)
-                    if point[0]==-180.0:
-                        point[0]=180.0
-                    if point[1]==-180.0:
-                        point[1]=180.0
-                    point[0]=round(point[0],1)
-                    point[1]=round(point[1],1)
-
-
-        with open(config.cable_geo_data_path, 'w') as f:
-            json.dump(line_dict, f)
-
-    @staticmethod
-    def one_decimal_land():
-        with open(config.landing_point_data_path, "r", encoding="utf-8") as f1:
-            line_dict=json.load(f1)
-
-        for index1,value1 in enumerate(line_dict["features"]):
-            landing_point=line_dict["features"][index1]["geometry"]["coordinates"]
-            landing_point[0]=round(landing_point[0],1)
-            landing_point[1]=round(landing_point[1],1)
-            if landing_point[0]==-180.0:
-                landing_point[0]=180.0
-            if landing_point[1]==-180.0:
-                landing_point[1]=180.0
-            landing_point[0]=round(landing_point[0],1)
-            landing_point[1]=round(landing_point[1],1)
-
-
-        with open(config.landing_point_data_path, 'w') as f:
-            json.dump(line_dict, f)
-
-
 
 def country_to_continent(land_name):
   try:
@@ -73,19 +26,14 @@ def country_to_continent(land_name):
   except:
     return 'none'
   
-def extract_virtual_points(cable_all_points):
-    
+def find_virtual_points(lst):
     virtual_points = []
-    list1 = []
-    for point in cable_all_points:
-        if cable_all_points.count(point) > 1:
-            list1.append(point)
-    if list1 == []:
-        print("no virtual points")
-    else:
-        for list2 in list1:
-            if list2 not in virtual_points:
-                virtual_points.append(list2)
+    for i in range(len(lst)):
+        for j in range(i + 1, len(lst)):
+            if isinstance(lst[i], list) and isinstance(lst[j], list):  # 检查子列表是否为列表
+                for x in lst[i]:
+                    if x in lst[j]:
+                        virtual_points.append(x)
     return virtual_points
 
 def findfiles(cable_id):
@@ -126,38 +74,49 @@ def find_land_points_coordinates(land_poins_name_list):
     return land_points_coordinates_dict
 
 
-land_set=set()
-land_set2=set()
-cable_num_dict={} #cable_num_dict{land_point_name:num}
-files_name = os.listdir(config.cable_file_path)
-for file_name in files_name:
-    try:
-        with open(config.cable_file_path+file_name, "r", encoding="utf-8") as f2:
-            line_dict2=json.load(f2)
-        if line_dict2.get("landing_points") == None:
-            print(file_name+"no land points")
-            continue
-        for land_point in line_dict2.get("landing_points"):
-        
-            land_point_name=land_point["name"]
-            land_set.add(land_point_name)
-            cable_num_dict[str(land_point_name)]=cable_num_dict.get(str(land_point_name),0)+1
-        
-    except:
-        print(file_name+"error")
-    f2.close()
-
-def find_cable_num(land_point_name):
-    return cable_num_dict[land_point_name]
-
-
+def find_which_is_landpoint(point):
+    with open('./landing-point-coordinates.json', "r", encoding="utf-8") as f1:
+        landing_points = json.load(f1)
+    if point in landing_points:
+        return True
+    else:
+        return False
 
 
 def get_l4_node():
+    land_set=set()
+    land_set2=set()
+    cable_num_dict={} #cable_num_dict{land_point_name:num}
+    path=config.cable_file_path
+    files_name = os.listdir(path)
+    for file_name in files_name:
+        try:
+            with open(config.cable_file_path+file_name, "r", encoding="utf-8") as f2:
+                line_dict2=json.load(f2)
+            if line_dict2.get("landing_points") == None:
+                print(file_name+"no land points")
+                continue
+            for land_point in line_dict2.get("landing_points"):
+            
+                land_point_name=land_point["name"]
+                land_set.add(land_point_name)
+                cable_num_dict[str(land_point_name)]=cable_num_dict.get(str(land_point_name),0)+1
+            
+        except:
+            print(file_name+"error")
+        f2.close()
+
+    def find_cable_num(land_point_name):
+        return cable_num_dict[land_point_name]
+
+
+    with open(config.cable_geo_data_path, "r", encoding="utf-8") as f1:
+        line_dict=json.load(f1)
     f = open(config.l4_node_data_path, 'w', encoding='utf-8',newline='')
     csv_writer = csv.writer(f)
     csv_writer.writerow(['coordinates','land_name','cable_number','country'])
 
+
     for index1,value1 in enumerate(line_dict["features"]):
         # list_cable为一个种类的海缆
         list_line=line_dict["features"][index1]["geometry"]["coordinates"]
@@ -166,31 +125,33 @@ def get_l4_node():
         land_points = {}
         # 构建land_points{coordinates,name}
         land_points=find_land_points_coordinates(find_land_points_name(findfiles(cable_id)))
+        # land_set3.update(land_points.values())
 
-        #找虚拟点的过程
-        s2=list()
+        land_points_temp=[]
         for item in land_points.keys():
-            s2.append(str(item))
+            item = item.replace("[", "")
+            item = item.replace("]", "")
+            item = item.replace(" ", "")
+            item = item.split(",")
+            item = [float(item[0]), float(item[1])]
+            land_points_temp.append(item)
 
-        virtual_points = []
+
+
+
         cable_all_points = []
         for list_single_line in list_line:
             cable_all_points.extend(list_single_line)
 
-        s1=list()
-        for item in cable_all_points:
-            s1.append(str(item))
-        
-        cable_all_points_noland = []
-        cable_all_points_noland_str = [i for i in s1 if i not in s2]
-        for item in cable_all_points_noland_str:
-            item = item.replace("[","")
-            item = item.replace("]","")
-            item = item.replace(" ","")
-            item = item.split(",")
-            item = [float(item[0]),float(item[1])]
-            cable_all_points_noland.append(item)
-        virtual_points = extract_virtual_points(cable_all_points_noland)
+        list_line_noland = list_line[:]
+        for l in list_line_noland:
+            for p in land_points_temp:
+                if p in l:
+                    # print(p)
+                    l.remove(p)
+
+        virtual_points = find_virtual_points(list_line_noland)
+
 
         #构建虚拟点字典{str(point),vpx+id}
         virtual_points_temp=virtual_points[:]
@@ -203,46 +164,71 @@ def get_l4_node():
                     virtual_points_temp.remove(virtual_point)
                     x=x+1
 
-
         random_num=random.randrange(10,100,1)
 
-    # node.csv
-    x=1
-    for point in cable_all_points:
-        for land_point_coordinates,land_point_name in list(land_points.items()):
-            if str(point) == land_point_coordinates:
-                land_set2.add(land_point_name)
-                #取出land_point_country
-                land_point_name_list=land_point_name.split(",")
-                if len(land_point_name_list)==2:
-                    land_point_country=land_point_name_list[1]
-                else:
-                    land_point_country=land_point_name_list[2]
-                #找出cable_number
-                cable_number=find_cable_num(land_point_name)
-                point=str(point)
-                point=point.replace("[","")
-                point=point.replace("]","")
-                csv_writer.writerow([point,land_point_name,cable_number,land_point_country])
-                # del land_points[land_point_coordinates]
-        for virtual_point in virtual_points[:]:
-            if point== virtual_point:
-                print("yes")
-                # print(type(point))
-                point=str(point)
-                point=point.replace("[","")
-                point=point.replace("]","")
-                csv_writer.writerow([point,"vp"+str(x)+","+cable_id,1,'none'])
-                virtual_points.remove(virtual_point)
-                x=x+1
+        # node.csv
+        x=1
+        for point in cable_all_points:
+            for land_point_coordinates,land_point_name in list(land_points.items()):
+                if str(point) == land_point_coordinates:
+                    land_set2.add(land_point_name)
+                    #取出land_point_country
+                    land_point_name_list=land_point_name.split(",")
+                    if len(land_point_name_list)==2:
+                        land_point_country=land_point_name_list[1]
+                    else:
+                        land_point_country=land_point_name_list[2]
+                    #找出cable_number
+                    cable_number=find_cable_num(land_point_name)
+                    csv_writer.writerow([point,land_point_name,cable_number,land_point_country])
+                    # del land_points[land_point_coordinates]
+            for virtual_point in virtual_points[:]:
+                if point== virtual_point:
+                    print("yes")
 
-    # f.close()
+                    csv_writer.writerow([point,"vp"+str(x)+","+cable_id,1,'none'])
+                    virtual_points.remove(virtual_point)
+                    x=x+1
 
+    #去重
+    df_node = pd.read_csv(config.l4_node_data_path) 
+    df_node.drop_duplicates(inplace=True)
+    df_node.to_csv(config.l4_node_data_path,index=False)
 
 def get_l4_edge():
-    f2 = open(config.l4_edge_data_path, 'w', encoding='utf-8',newline='')
-    csv_writer2 = csv.writer(f2)
-    csv_writer2.writerow(['start_land_name','end_land_name','cable_id','band_width','length','owners','suppliers','rfs','rfs_year','is_planned'])
+
+    land_set=set()
+    land_set2=set()
+    cable_num_dict={} #cable_num_dict{land_point_name:num}
+    path=config.cable_file_path
+    files_name = os.listdir(path)
+    for file_name in files_name:
+        try:
+            with open(config.cable_file_path+file_name, "r", encoding="utf-8") as f2:
+                line_dict2=json.load(f2)
+            if line_dict2.get("landing_points") == None:
+                print(file_name+"no land points")
+                continue
+            for land_point in line_dict2.get("landing_points"):
+            
+                land_point_name=land_point["name"]
+                land_set.add(land_point_name)
+                cable_num_dict[str(land_point_name)]=cable_num_dict.get(str(land_point_name),0)+1
+            
+        except:
+            print(file_name+"error")
+        f2.close()
+
+    def find_cable_num(land_point_name):
+        return cable_num_dict[land_point_name]
+
+    with open(config.cable_geo_data_path, "r", encoding="utf-8") as f1:
+        line_dict=json.load(f1)
+    f = open(config.l4_edge_data_path, 'w', encoding='utf-8',newline='')
+    csv_writer = csv.writer(f)
+    csv_writer.writerow(['start_land_name','end_land_name','cable_id','band_width','length','owners','suppliers','rfs','rfs_year','is_planned'])
+
+
     for index1,value1 in enumerate(line_dict["features"]):
         # list_cable为一个种类的海缆
         list_line=line_dict["features"][index1]["geometry"]["coordinates"]
@@ -251,33 +237,38 @@ def get_l4_edge():
         land_points = {}
         # 构建land_points{coordinates,name}
         land_points=find_land_points_coordinates(find_land_points_name(findfiles(cable_id)))
+        # land_set3.update(land_points.values())
+        # print(land_points)
+    
 
-        cable_length,cable_owners,cable_suppliers,cable_rfs,cable_rfs_year,cable_is_planned=find_cable_attributes(findfiles(cable_id))
+        #构建land_points_temp float类型一位小数
+        land_points_temp=[]
+        land_points_copy=land_points.copy()
+        for item in land_points_copy.keys():
+            item = item.replace("[", "")
+            item = item.replace("]", "")
+            item = item.replace(" ", "")
+            item = item.split(",")
+            item = [float(item[0]),float(item[1])]
+            # print(item)
+            land_points_temp.append(item)
 
-        #找虚拟点的过程
-        s2=list()
-        for item in land_points.keys():
-            s2.append(str(item))
 
-        virtual_points = []
+
+
         cable_all_points = []
         for list_single_line in list_line:
             cable_all_points.extend(list_single_line)
 
-        s1=list()
-        for item in cable_all_points:
-            s1.append(str(item))
-        
-        cable_all_points_noland = []
-        cable_all_points_noland_str = [i for i in s1 if i not in s2]
-        for item in cable_all_points_noland_str:
-            item = item.replace("[","")
-            item = item.replace("]","")
-            item = item.replace(" ","")
-            item = item.split(",")
-            item = [float(item[0]),float(item[1])]
-            cable_all_points_noland.append(item)
-        virtual_points = extract_virtual_points(cable_all_points_noland)
+        #构建list_line_noland
+        list_line_noland=copy.deepcopy(list_line)
+        # list_line_noland=list_line[:]
+        for l in list_line_noland:
+            for p in land_points_temp:
+                if p in l:
+                    l.remove(p)
+
+        virtual_points = find_virtual_points(list_line_noland)
 
         #构建虚拟点字典{str(point),vpx+id}
         virtual_points_temp=virtual_points[:]
@@ -290,10 +281,19 @@ def get_l4_edge():
                     virtual_points_temp.remove(virtual_point)
                     x=x+1
 
-
         random_num=random.randrange(10,100,1)
 
+        if cable_id=="cadmos-2":
+            print("我是登陆点集合")
+            print(land_points)
+
+        #point 一位小数float
+        #land_point_coordinates 1位小数str
         # triple.csv正确的and edge.csv正确的
+        if cable_id=="cadmos-2":
+            print("我是所有点集合")
+            print(list_line)
+            print(line_dict["features"][index1]["geometry"]["coordinates"])
         for line in list_line:
             line_point_list=[]#存放这条线里所有点
             triple_list=[]#存放land_coo三元组
@@ -301,8 +301,17 @@ def get_l4_edge():
             for point in line:
                 line_point_list.append(point)
             for point in line_point_list:
+                if cable_id=="cadmos-2":
+                    print("我是点"+str(point))
+                # print(point)
                 for land_point_coordinates,land_point_name in land_points.items():
-                    if str(point) == land_point_coordinates:
+                    if cable_id=="cadmos-2":
+                        
+                        print("我是登陆点"+land_point_coordinates+land_point_name)
+                    if str(point) == str(land_point_coordinates):
+
+                        # print(point,land_point_coordinates)
+                        # print(land_point_coordinates)
                         triple_list.append(point)
                         triple_list_name.append(land_point_name)
                 for i in range(len(virtual_points)):
@@ -310,68 +319,17 @@ def get_l4_edge():
                         triple_list.append(point)
                         triple_list_name.append(virtual_points_dict[str(point)])
 
+            cable_length,cable_owners,cable_suppliers,cable_rfs,cable_rfs_year,cable_is_planned=find_cable_attributes(findfiles(cable_id))
+
+
             for i in range(len(triple_list_name)-1):
-                csv_writer2.writerow([triple_list_name[i],triple_list_name[i+1],cable_id,random_num,cable_length,cable_owners,cable_suppliers,cable_rfs,cable_rfs_year,cable_is_planned])
+                csv_writer.writerow([triple_list_name[i],triple_list_name[i+1],cable_id,random_num,cable_length,cable_owners,cable_suppliers,cable_rfs,cable_rfs_year,cable_is_planned])
 
-
-def clean_180():
-    df_node = pd.read_csv(config.l4_node_data_path)
-    df_node.drop_duplicates(subset=df_node.columns, keep='last', inplace=True)
-    df_node_virtual = df_node[df_node['land_name'].str.startswith('vp') == True]
-    df_node_180=df_node_virtual[df_node_virtual['coordinates'].str.contains("180")]
-
-    df_edge=pd.read_csv(config.l4_edge_data_path)
-    df_edge.drop_duplicates(subset=df_edge.columns, keep='last', inplace=True)
-
-
-    for index,node in df_node_180.iterrows():
-        node_name=node[1]
-        print(node_name)
-        df_edge_180=df_edge.loc[df_edge["start_land_name"] == node_name]
-        df_edge_180=df_edge_180.append(df_edge.loc[df_edge["end_land_name"] == node_name])
-        df_edge_copy=df_edge_180.copy()
-        print(df_edge_180)   
-        landset=set(df_edge_180['start_land_name'].to_list()+df_edge_180['end_land_name'].to_list())
-        print(landset)
-        landset.remove(node_name)
-        landlist=list(landset)
-        print(landlist)
-        edge_new=df_edge_180.iloc[0].copy()
-        print(edge_new)
-        edge_new['start_land_name']=landlist[0]
-        edge_new['end_land_name']=landlist[1]
-        edge_new['cable_id']=df_edge_copy['cable_id'].to_list()[0]
-        edge_new['band_width']=df_edge_copy['band_width'].to_list()[0]
-
-        print(edge_new)
-
-
-        #在df_edge中删除df_edge_180
-
-        df_edge=df_edge.append(df_edge_180).drop_duplicates(keep=False)
-        #在df_edge中添加合并后的边
-        df_edge=df_edge.append(edge_new,ignore_index=True)
-
-        #在df_node中删除df_node_180
-        df_node=df_node.append(df_node_180).drop_duplicates(keep=False)
-
-    df_node.to_csv(config.l4_node_data_path, index=False)
-    df_edge.to_csv(config.l4_edge_data_path, index=False)
-
-def delete_blank():
-    df_node = pd.read_csv(config.l4_node_data_path)
-    df_node.drop_duplicates(subset=df_node.columns, keep='last', inplace=True)
-    
-
-def l4_csv_data():
-    get_l4_edge()
-    clean_180()
-
-
+    df_l4_edge = pd.read_csv(config.l4_edge_data_path)
+    df_l4_edge = df_l4_edge.drop_duplicates()
+    df_l4_edge = df_l4_edge.loc[~(df_l4_edge['start_land_name'] == df_l4_edge['end_land_name'])]
+    df_l4_edge.to_csv(config.l4_edge_data_path, index=False)
 
 if __name__ == '__main__':
-    l4_csv_data()
-
-
-
-
+    # get_l4_node()
+    get_l4_edge()
