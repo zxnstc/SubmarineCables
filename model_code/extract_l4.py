@@ -11,6 +11,49 @@ from config import DefaultConfig
 sum = 0
 config = DefaultConfig()
 
+class RawDataProcess:
+    @staticmethod
+    def one_decimal_cable():
+        with open(config.cable_geo_data_path, "r", encoding="utf-8") as f1:
+            line_dict=json.load(f1)
+
+        for index1,value1 in enumerate(line_dict["features"]):
+            # list_cable为一个种类的海缆
+            list_line=line_dict["features"][index1]["geometry"]["coordinates"]
+            for singleline in list_line:
+                for point in singleline:
+                    point[0]=round(point[0],1)
+                    point[1]=round(point[1],1)
+                    if point[0]==-180.0:
+                        point[0]=180.0
+                    if point[1]==-180.0:
+                        point[1]=180.0
+                    point[0]=round(point[0],1)
+                    point[1]=round(point[1],1)
+
+
+        with open(config.cable_geo_data_path, 'w') as f:
+            json.dump(line_dict, f)
+
+    @staticmethod
+    def one_decimal_land():
+        with open(config.landing_point_data_path, "r", encoding="utf-8") as f1:
+            line_dict=json.load(f1)
+
+        for index1,value1 in enumerate(line_dict["features"]):
+            landing_point=line_dict["features"][index1]["geometry"]["coordinates"]
+            landing_point[0]=round(landing_point[0],1)
+            landing_point[1]=round(landing_point[1],1)
+            if landing_point[0]==-180.0:
+                landing_point[0]=180.0
+            if landing_point[1]==-180.0:
+                landing_point[1]=180.0
+            landing_point[0]=round(landing_point[0],1)
+            landing_point[1]=round(landing_point[1],1)
+
+
+        with open(config.landing_point_data_path, 'w') as f:
+            json.dump(line_dict, f)
 
 #根据国家名称找到对应的大洲
 def country_to_continent(land_name):
